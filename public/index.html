@@ -24,26 +24,22 @@
 </head>
 <body>
   <h2>📡 设备数据自动上报</h2>
-  <p id="info">正在读取设备信息...</p>
-  <div id="status" class="loading">准备上报数据...</div>
+  <p id="info">正在处理...</p>
+  <div id="status" class="loading">请稍候...</div>
 
   <script>
-    // 1. 从 URL 查询参数中提取数据
+    // 1. 从 URL 获取参数
     const urlParams = new URLSearchParams(window.location.search);
     const device = urlParams.get('device') || '';
-    const ble_addr = urlParams.get('ble_addr') || ''; // 注意：你写的是 bel_addr，但应该是 ble_addr？
+    const ble_addr = urlParams.get('ble_addr') || '';
     const jingwei = urlParams.get('jingwei') || '';
 
-    // 显示当前读取到的信息（可选，上线后可删除）
-    document.getElementById('info').textContent = 
-      `设备: ${device} | BLE: ${ble_addr} | 经纬度: ${jingwei}`;
-
-    // 2. 如果必要参数缺失，停止上报
     if (!device || !ble_addr) {
-      document.getElementById('status').className = 'error';
-      document.getElementById('status').textContent = '❌ 缺少必要参数（device 或 ble_addr）';
+      document.getElementById('info').textContent = '❌ 缺少必要参数';
+      document.getElementById('status').className = 'status';
+      document.getElementById('status').textContent = '请检查 URL';
     } else {
-      // 3. 自动发送数据到后端 API
+      // 2. 发送数据到后端（现在后端会自动去重 + 返回总数）
       fetch('/api/user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,18 +47,29 @@
       })
       .then(res => res.json())
       .then(data => {
+        const infoEl = document.getElementById('info');
         const statusEl = document.getElementById('status');
-        if (data.success) {
-          statusEl.className = 'success';
-          statusEl.textContent = '✅ 数据已成功上报！';
+
+        if (data.error) {
+          infoEl.textContent = `设备: ${device} | BLE: ${ble_addr}`;
+          statusEl.className = 'status';
+          statusEl.textContent = `❌ ${data.error}`;
         } else {
-          throw new Error(data.error || '未知错误');
+          infoEl.textContent = `设备: ${device} | BLE: ${ble_addr}`;
+          statusEl.className = 'success';
+          if (data.inserted) {
+            statusEl.textContent = `✅ 新设备已记录！`;
+          } else {
+            statusEl.textContent = `ℹ️ 设备已存在，跳过重复记录。`;
+          }
+          // 显示总设备数
+          document.body.innerHTML += `<div style="margin-top:20px;font-size:18px;color:#28a745;">📊 当前共 <strong>${data.total}</strong> 台设备</div>`;
         }
       })
       .catch(err => {
-        console.error('上报失败:', err);
-        document.getElementById('status').className = 'error';
-        document.getElementById('status').textContent = '❌ 上报失败：' + err.message;
+        console.error(err);
+        document.getElementById('status').className = 'status';
+        document.getElementById('status').textContent = '❌ 网络错误';
       });
     }
   </script>
