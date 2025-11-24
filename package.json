@@ -1,4 +1,7 @@
-your-project/
-├── public/index.html
-├── api/user.js
-└── package.json
+{
+  "name": "ble-jilu",
+  "version": "1.0.0",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.40.0"
+  }
+}
