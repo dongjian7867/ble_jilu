@@ -1,7 +1,8 @@
 {
-  "name": "ble-jilu",
+  "name": "ble_jilu",
   "version": "1.0.0",
   "dependencies": {
     "@supabase/supabase-js": "^2.40.0"
   }
 }
+
