@@ -13,38 +13,51 @@ module.exports = async (req, res) => {
   let body = '';
   req.on('data', chunk => body += chunk);
   req.on('end', async () => {
-    try {
-      const data = JSON.parse(body);
-      const { device, ble_addr, jingwei } = data;
-
-      // 验证必要字段
+      try {
+      const { device, ble_addr, jingwei } = JSON.parse(body);
       if (!device || !ble_addr) {
         return res.status(400).json({ error: '缺少 device 或 ble_addr' });
       }
 
-      // 连接 Supabase
       const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      const tableName = 'user-info'; // 👈 重要：改成你的真实表名，比如 'ble_logs'
 
-      // 插入数据（假设你的表名是 user-info）
-      const { error } = await supabase
-        .from('user-info') // 👈 替换为你的实际表名！
-        .insert([
-          { 
-            device: device,
-            ble_addr: ble_addr,
-            jingwei: jingwei || null // 允许为空
-          }
-        ]);
+      // 1. 检查是否已存在相同 ble_addr
+      const { data: existing, error: checkError } = await supabase
+        .from(tableName)
+        .select('ble_addr')
+        .eq('ble_addr', ble_addr)
+        .limit(1);
 
-      if (error) {
-        console.error('Supabase 错误:', error);
-        return res.status(500).json({ error: '数据库写入失败' });
+      if (checkError) throw checkError;
+
+      let inserted = false;
+      if (existing.length === 0) {
+        // 2. 不存在 → 插入
+        const { error: insertError } = await supabase
+          .from(tableName)
+          .insert([{ device, ble_addr, jingwei }]);
+        if (insertError) throw insertError;
+        inserted = true;
       }
 
-      res.status(200).json({ success: true });
+      // 3. 查询去重后的总设备数（按 ble_addr 去重）
+      const { count, error: countError } = await supabase
+        .from(tableName)
+        .select('ble_addr', { count: 'exact', head: true });
+
+      if (countError) throw countError;
+
+      // 4. 返回结果
+      res.status(200).json({
+        success: true,
+        inserted,
+        total: count
+      });
+
     } catch (err) {
-      console.error('解析错误:', err);
-      res.status(400).json({ error: '无效的 JSON 数据' });
+      console.error('后端错误:', err.message);
+      res.status(500).json({ error: '服务器内部错误' });
     }
   });
 };
