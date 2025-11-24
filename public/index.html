@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Data Collector</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      text-align: center;
+      padding: 40px;
+      background: #f8f9fa;
+      color: #495057;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
+    .loading { background: #d1ecf1; color: #0c5460; }
+  </style>
+</head>
+<body>
+  <h2>📡 设备数据自动上报</h2>
+  <p id="info">正在读取设备信息...</p>
+  <div id="status" class="loading">准备上报数据...</div>
+
+  <script>
+    // 1. 从 URL 查询参数中提取数据
+    const urlParams = new URLSearchParams(window.location.search);
+    const device = urlParams.get('device') || '';
+    const ble_addr = urlParams.get('ble_addr') || ''; // 注意：你写的是 bel_addr，但应该是 ble_addr？
+    const jingwei = urlParams.get('jingwei') || '';
+
+    // 显示当前读取到的信息（可选，上线后可删除）
+    document.getElementById('info').textContent = 
+      `设备: ${device} | BLE: ${ble_addr} | 经纬度: ${jingwei}`;
+
+    // 2. 如果必要参数缺失，停止上报
+    if (!device || !ble_addr) {
+      document.getElementById('status').className = 'error';
+      document.getElementById('status').textContent = '❌ 缺少必要参数（device 或 ble_addr）';
+    } else {
+      // 3. 自动发送数据到后端 API
+      fetch('/api/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device, ble_addr, jingwei })
+      })
+      .then(res => res.json())
+      .then(data => {
+        const statusEl = document.getElementById('status');
+        if (data.success) {
+          statusEl.className = 'success';
+          statusEl.textContent = '✅ 数据已成功上报！';
+        } else {
+          throw new Error(data.error || '未知错误');
+        }
+      })
+      .catch(err => {
+        console.error('上报失败:', err);
+        document.getElementById('status').className = 'error';
+        document.getElementById('status').textContent = '❌ 上报失败：' + err.message;
+      });
+    }
+  </script>
+</body>
+</html>
+
