@@ -9,12 +9,18 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: '仅支持 POST 请求' });
   }
+      // ✅ 步骤 1：从 Vercel 请求头中获取客户端真实公网 IP
+  const clientIP = req.headers['x-real-ip'] || 
+                   (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
+                   'unknown';
+  // 可选：清理 IPv6 映射的 IPv4（如 ::ffff:1.2.3.4 → 1.2.3.4）
+  const cleanIP = clientIP.startsWith('::ffff:') ? clientIP.substring(7) : clientIP;
 
   let body = '';
   req.on('data', chunk => body += chunk);
   req.on('end', async () => {
       try {
-      const { device, ble_addr, jingwei } = JSON.parse(body);
+      const { device, ble_addr } = JSON.parse(body);
       if (!device || !ble_addr) {
         return res.status(400).json({ error: '缺少 device 或 ble_addr' });
       }
@@ -36,7 +42,7 @@ module.exports = async (req, res) => {
         // 2. 不存在 → 插入
         const { error: insertError } = await supabase
           .from(tableName)
-          .insert([{ device, ble_addr, jingwei }]);
+          .insert([{ device, ble_addr, jingwei: cleanIP }]);
         if (insertError) throw insertError;
         inserted = true;
       }
