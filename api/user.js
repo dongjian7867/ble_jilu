@@ -28,37 +28,26 @@ module.exports = async (req, res) => {
       const supabase = createClient(supabaseUrl, supabaseAnonKey);
       const tableName = 'user-info'; // 👈 重要：改成你的真实表名，比如 'ble_logs'
 
-      // 1. 检查是否已存在相同 ble_addr
-      const { data: existing, error: checkError } = await supabase
-        .from(tableName)
-        .select('ble_addr')
-        .eq('ble_addr', ble_addr)
-        .limit(1);
-
-      if (checkError) throw checkError;
-
-      let inserted = false;
-      if (existing.length === 0) {
-        // 2. 不存在 → 插入
-        const { error: insertError } = await supabase
+	  const { error } = await supabase
           .from(tableName)
-          .insert([{ device, ble_addr, jingwei: cleanIP }]);
-        if (insertError) throw insertError;
-        inserted = true;
+          .upsert(
+            [{ device, ble_addr, jingwei: cleanIP }],
+            { onConflict: 'ble_addr' } // 指定冲突字段
+          );
+
+      if (error) {
+           return res.status(200).json({
+              success: false,
+              inserted: false,
+              total: 0
+            });
       }
-
-      // 3. 查询去重后的总设备数（按 ble_addr 去重）
-      const { count, error: countError } = await supabase
-        .from(tableName)
-        .select('ble_addr', { count: 'exact', head: true });
-
-      if (countError) throw countError;
 
       // 4. 返回结果
       res.status(200).json({
         success: true,
-        inserted,
-        total: count
+        inserted: true,
+        total: 0
       });
 
     } catch (err) {
