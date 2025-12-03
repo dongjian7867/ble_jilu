@@ -9,6 +9,10 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: '仅支持 POST 请求' });
   }
+const { device, ble_addr } = req.body || {};
+  if (!device || !ble_addr) {
+    return res.status(400).json({ error: '缺少 device 或 ble_addr' });
+  }
       // ✅ 步骤 1：从 Vercel 请求头中获取客户端真实公网 IP
   const clientIP = req.headers['x-real-ip'] || 
                    (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
