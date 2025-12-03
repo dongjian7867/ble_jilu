@@ -9,10 +9,6 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: '仅支持 POST 请求' });
   }
-const { device, ble_addr } = req.body || {};
-  if (!device || !ble_addr) {
-    return res.status(400).json({ error: '缺少 device 或 ble_addr' });
-  }
       // ✅ 步骤 1：从 Vercel 请求头中获取客户端真实公网 IP
   const clientIP = req.headers['x-real-ip'] || 
                    (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
@@ -20,51 +16,49 @@ const { device, ble_addr } = req.body || {};
   // 可选：清理 IPv6 映射的 IPv4（如 ::ffff:1.2.3.4 → 1.2.3.4）
   const cleanIP = clientIP.startsWith('::ffff:') ? clientIP.substring(7) : clientIP;
 
+  let body = '';
+  req.on('data', chunk => body += chunk);
+  req.on('end', async () => {
+      try {
+      const { device, ble_addr } = JSON.parse(body);
+      if (!device || !ble_addr) {
+        return res.status(400).json({ error: '缺少 device 或 ble_addr' });
+      }
 
-	export default async function handler(req, res) {
-  
-		  try {
-			const supabase = createClient(supabaseUrl, supabaseAnonKey);
-			const tableName = 'user-info';
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      const tableName = 'user-info'; // 👈 重要：改成你的真实表名，比如 'ble_logs'
 
-			// ✅ 关键优化：直接 upsert（1 次请求，原子操作）
-			const { data, error } = await supabase
-			  .from(tableName)
-			  .upsert(
-				[{ device, ble_addr, jingwei: cleanIP }],
-				{ onConflict: 'ble_addr', ignoreDuplicates: false }
-			  )
-			  .select(); // ← 获取实际写入的数据（用于判断是否新增）
+      // 1. 检查是否已存在相同 ble_addr
+      const { data: existing, error: checkError } = await supabase
+        .from(tableName)
+        .select('ble_addr')
+        .eq('ble_addr', ble_addr)
+        .limit(1);
 
-			if (error) {
-			  console.error('Supabase upsert failed:', error);
-			  // ✅ 即使 DB 出错，也返回统一结构（不 500）
-			  return res.status(200).json({
-				success: false,
-				inserted: false,
-				total: 0
-			  });
-			}
+      if (checkError) throw checkError;
 
-			// 判断是否为新插入：如果返回的数据中 created_at 是刚生成的（或对比时间）
-			// 更简单方式：假设只要没报错，就认为操作成功
-			// 如果你需要精确知道是否“新增”，可加一个默认值字段如 `first_seen`
-			const inserted = true; // 注意：upsert 成功即视为有效操作
+      let inserted = false;
+      if (existing.length === 0) {
+        // 2. 不存在 → 插入
+        const { error: insertError } = await supabase
+          .from(tableName)
+          .insert([{ device, ble_addr, jingwei: cleanIP }]);
+        if (insertError) throw insertError;
+        inserted = true;
+      }
 
-			// ⚡️ 如果你不需要实时 total，直接返回（最快！）
-			return res.status(200).json({
-			  success: true,
-			  inserted,
-			  total: 0 // 或省略，前端自己累加
-			});
 
-		  } catch (err) {
-			console.error('Unexpected error:', err);
-			return res.status(200).json({
-			  success: false,
-			  inserted: false,
-			  total: 0
-			});
-		  }
-  }
+
+      // 4. 返回结果
+      res.status(200).json({
+        success: true,
+        inserted,
+        total: 0
+      });
+
+    } catch (err) {
+      console.error('后端错误:', err.message);
+      res.status(500).json({ error: '服务器内部错误' });
+    }
+  });
 };
