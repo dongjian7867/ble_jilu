@@ -9,12 +9,7 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: '仅支持 POST 请求' });
   }
-      // ✅ 步骤 1：从 Vercel 请求头中获取客户端真实公网 IP
-  const clientIP = req.headers['x-real-ip'] || 
-                   (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) ||
-                   'unknown';
-  // 可选：清理 IPv6 映射的 IPv4（如 ::ffff:1.2.3.4 → 1.2.3.4）
-  const cleanIP = clientIP.startsWith('::ffff:') ? clientIP.substring(7) : clientIP;
+
 
   let body = '';
   req.on('data', chunk => body += chunk);
@@ -40,9 +35,18 @@ module.exports = async (req, res) => {
       let inserted = false;
       if (existing.length === 0) {
         // 2. 不存在 → 插入
+          // 获取当前时间并格式化为 yyyy-mm-dd hh:mm
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const formattedTime = `${year}-${month}-${day} ${hours}:${minutes}`;
+        
         const { error: insertError } = await supabase
           .from(tableName)
-          .insert([{ device, ble_addr, jingwei: cleanIP }]);
+          .insert([{ device, ble_addr, jingwei: formattedTime }]);
         if (insertError) throw insertError;
         inserted = true;
       }
