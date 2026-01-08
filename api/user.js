@@ -26,13 +26,14 @@ module.exports = async (req, res) => {
       // 1. 检查是否已存在相同 ble_addr
       const { data: existing, error: checkError } = await supabase
         .from(tableName)
-        .select('ble_addr')
+        .select('ble_addr', 'zt')
         .eq('ble_addr', ble_addr)
         .limit(1);
 
       if (checkError) throw checkError;
 
       let inserted = false;
+      let total = 0;
       if (existing.length === 0) {
         // 2. 不存在 → 插入
           // 获取当前时间并格式化为 yyyy-mm-dd hh:mm
@@ -46,9 +47,11 @@ module.exports = async (req, res) => {
         
         const { error: insertError } = await supabase
           .from(tableName)
-          .insert([{ device, ble_addr, jingwei: formattedTime }]);
+          .insert([{ device, ble_addr, jingwei: formattedTime, zt: 0 }]);
         if (insertError) throw insertError;
         inserted = true;
+      }else{
+        total = existing[0].zt;
       }
 
 
@@ -57,7 +60,7 @@ module.exports = async (req, res) => {
       res.status(200).json({
         success: true,
         inserted,
-        total: 0
+        total
       });
 
     } catch (err) {
