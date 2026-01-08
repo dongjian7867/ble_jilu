@@ -26,7 +26,7 @@ module.exports = async (req, res) => {
       // 1. 检查是否已存在相同 ble_addr
       const { data: existing, error: checkError } = await supabase
         .from(tableName)
-        .select('ble_addr', 'zt')
+        .select('ble_addr, zt')
         .eq('ble_addr', ble_addr)
         .limit(1);
 
