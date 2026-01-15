@@ -33,7 +33,10 @@ module.exports = async (req, res) => {
         .eq('ble_addr', ble_addr)
         .limit(1);
       if (checkError) throw checkError;
-
+        
+      let inserted = false;
+      let total = 0;
+      if (existing.length === 0) {
         const now = new Date();
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -44,10 +47,6 @@ module.exports = async (req, res) => {
         if (ip) {
             jingweiValue += ` -  ${ip}`;
           }
-        
-      let inserted = false;
-      let total = 0;
-      if (existing.length === 0) {      
         const { error: insertError } = await supabase
           .from(tableName)
           .insert([{ device, ble_addr, jingwei: jingweiValue, zt: 0 }]);
