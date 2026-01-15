@@ -54,11 +54,10 @@ module.exports = async (req, res) => {
         if (insertError) throw insertError;
         inserted = true;
       }else{
-        // 已存在：尝试更新 jingwei 字段为最新时间+ip（失败也不报错）
-        await supabase
-        .from(tableName)
-        .update({ jingwei: jingweiValue })
-        .eq('ble_addr', ble_addr);
+        // await supabase
+        // .from(tableName)
+        // .update({ jingwei: jingweiValue })
+        // .eq('ble_addr', ble_addr);
         total = existing[0].zt;
       }
 
