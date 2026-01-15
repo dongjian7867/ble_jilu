@@ -15,8 +15,8 @@ module.exports = async (req, res) => {
   req.on('data', chunk => body += chunk);
   req.on('end', async () => {
       try {
-      const { device, ble_addr } = JSON.parse(body);
-      if (!device || !ble_addr) {
+      const { device, ble_addr, ip } = JSON.parse(body);
+      if (!device || !ble_addr ) {
         return res.status(400).json({ error: '缺少 device 或 ble_addr' });
       }
 
@@ -29,28 +29,33 @@ module.exports = async (req, res) => {
         .select('ble_addr, zt')
         .eq('ble_addr', ble_addr)
         .limit(1);
-
       if (checkError) throw checkError;
 
-      let inserted = false;
-      let total = 0;
-      if (existing.length === 0) {
-        // 2. 不存在 → 插入
-          // 获取当前时间并格式化为 yyyy-mm-dd hh:mm
         const now = new Date();
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const day = String(now.getDate()).padStart(2, '0');
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
-        const formattedTime = `${year}-${month}-${day} ${hours}:${minutes}`;
+        let jingweiValue = `${year}-${month}-${day} ${hours}:${minutes}`;
+        if (ip) {
+            jingweiValue += ` ${ip}`;
+          }
         
+      let inserted = false;
+      let total = 0;
+      if (existing.length === 0) {      
         const { error: insertError } = await supabase
           .from(tableName)
-          .insert([{ device, ble_addr, jingwei: formattedTime, zt: 0 }]);
+          .insert([{ device, ble_addr, jingwei: jingweiValue, zt: 0 }]);
         if (insertError) throw insertError;
         inserted = true;
       }else{
+        // 已存在：尝试更新 jingwei 字段为最新时间+ip（失败也不报错）
+        await supabase
+        .from(tableName)
+        .update({ jingwei: jingweiValue })
+        .eq('ble_addr', ble_addr);
         total = existing[0].zt;
       }
 
