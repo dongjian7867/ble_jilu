@@ -39,7 +39,7 @@ module.exports = async (req, res) => {
         const minutes = String(now.getMinutes()).padStart(2, '0');
         let jingweiValue = `${year}-${month}-${day} ${hours}:${minutes}`;
         if (ip) {
-            jingweiValue += ` ${ip}`;
+            jingweiValue += ` -  ${ip}`;
           }
         
       let inserted = false;
