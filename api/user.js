@@ -17,8 +17,11 @@ module.exports = async (req, res) => {
       try {
       const { device, ble_addr, ip } = JSON.parse(body);
       if (!device || !ble_addr ) {
-        return res.status(400).json({ error: '缺少 device 或 ble_addr' });
+        return res.status(400).json({ error: 'no param' });
       }
+      	if(ble_addr === "G-78:9C:E7:73:56:AF"){
+          return res.status(400).json({ error: 'invalid param' });
+	      }
 
       const supabase = createClient(supabaseUrl, supabaseAnonKey);
       const tableName = 'user-info'; // 👈 重要：改成你的真实表名，比如 'ble_logs'
