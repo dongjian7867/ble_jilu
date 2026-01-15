@@ -2,7 +2,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://hbhxunklvlctcbrrmvmr.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiaHh1bmtsdmxjdGNicnJtdm1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDY2OTMsImV4cCI6MjA3OTUyMjY5M30.OF4p3aHMxc3kQRseZyvw1dZDBJ4UB1vtsL6VPut4icI';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiaHh1bmtsdmxjdGNicnJtdm1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDY2OTMsImV4cCI6MjA3OTUyMjY5M30.OF4p3aHMxc3kQRseZyvw1dZDBJ4UB1vtsL6VPut4icI'; 
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 module.exports = async (req, res) => {
   // 只接受 POST
@@ -23,7 +24,7 @@ module.exports = async (req, res) => {
           return res.status(400).json({ error: 'invalid param' });
 	      }
 
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
       const tableName = 'user-info'; // 👈 重要：改成你的真实表名，比如 'ble_logs'
 
       // 1. 检查是否已存在相同 ble_addr
